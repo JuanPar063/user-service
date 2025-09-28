@@ -33,7 +33,7 @@ export class ProfileRepository implements ProfileRepositoryPort {
 
   async create(profileData: { 
     id_user: string;
-    id_profile: string;
+    // REMOVEMOS id_profile de aquí
     first_name: string; 
     last_name: string; 
     document_type: string; 
@@ -41,9 +41,10 @@ export class ProfileRepository implements ProfileRepositoryPort {
     phone: string; 
     address: string;  
   }): Promise<Profile> {
+    // Creamos una nueva instancia SIN especificar id_profile
     const profile = this.repo.create({
       id_user: profileData.id_user,
-      id_profile: profileData.id_profile,
+      // NO incluimos id_profile aquí
       first_name: profileData.first_name,
       last_name: profileData.last_name,
       document_type: profileData.document_type,
@@ -51,6 +52,8 @@ export class ProfileRepository implements ProfileRepositoryPort {
       phone: profileData.phone,
       address: profileData.address
     });
+    
+    // Guardamos y retornamos el profile con el ID generado automáticamente
     return this.repo.save(profile);
   }
 }

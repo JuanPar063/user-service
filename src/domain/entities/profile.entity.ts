@@ -20,7 +20,7 @@ export class Profile {
   @Column({ type: 'text' })
   document_number: string;
 
-  @Column({ type: 'text' })
+  @Column({ type: 'text', unique: true }) // Agregamos unique aquí también
   phone: string;
 
   @Column({ type: 'text' })
@@ -28,7 +28,9 @@ export class Profile {
 
   constructor(data?: Partial<Profile>) {
     if (data) {
-      Object.assign(this, data);
+      // NO asignamos id_profile si viene en data, dejamos que se genere automáticamente
+      const { id_profile, ...rest } = data;
+      Object.assign(this, rest);
     }
   }
 }

@@ -5,8 +5,8 @@ export interface ProfileRepositoryPort {
   findById(id: string): Promise<Profile | null>;
   findAll(): Promise<Profile[]>;
   create(ProfileData: { 
-    id_user: string
-    id_profile: string;
+    id_user: string;
+    // REMOVEMOS id_profile de aquí también
     first_name: string; 
     last_name: string; 
     document_type: string; 

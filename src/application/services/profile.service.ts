@@ -9,8 +9,8 @@ export class ProfileService implements CreateProfilePort, GetProfilePort {
   constructor(private readonly profileRepository: ProfileRepository) {}
 
   async createProfile(profileData: { 
-    id_user: string
-    id_profile: string;
+    id_user: string;
+    // REMOVEMOS id_profile de aquí
     first_name: string; 
     last_name: string; 
     document_type: string; 

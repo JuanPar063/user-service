@@ -1,14 +1,10 @@
-import { IsString, IsNotEmpty, Length } from 'class-validator';
+import { IsString, IsNotEmpty, Length, IsUUID } from 'class-validator';
 
 export class CreateProfileDto {
-  @IsString()
+  // REMOVEMOS id_profile del DTO ya que se genera automáticamente
+  
+  @IsUUID()
   @IsNotEmpty()
-  @Length(1, 100)
-  id_profile: string;
-
-  @IsString()
-  @IsNotEmpty()
-  @Length(1, 100)
   id_user: string;
 
   @IsString()

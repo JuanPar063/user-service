@@ -50,7 +50,7 @@ export class ProfileController {
   }
 
   @Get('phone/:phone')
-  async getUserByTelefono(@Param('phone') phone: string): Promise<{
+  async getUserByPhone(@Param('phone') phone: string): Promise<{
     message: string;
     data: ProfileResponseDto;
   }> {
