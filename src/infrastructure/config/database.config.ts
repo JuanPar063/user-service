@@ -1,4 +1,4 @@
-import { User } from '../../domain/entities/user.entity'; // path corregida
+import { Profile } from '../../domain/entities/profile.entity'; // path corregida
 import { TypeOrmModuleOptions } from '@nestjs/typeorm';
 import * as dotenv from 'dotenv';
 dotenv.config();
@@ -10,6 +10,6 @@ export const typeOrmConfig: TypeOrmModuleOptions = {
   username: process.env.DATABASE_USER || 'postgres',
   password: process.env.DATABASE_PASSWORD || 'password',
   database: process.env.DATABASE_NAME || 'mydb',
-  entities: [User],
+  entities: [Profile],
   synchronize: true,
 };

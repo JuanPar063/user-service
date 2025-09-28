@@ -1,38 +1,56 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { UserRepositoryPort } from '../../../../domain/ports/out/user-repository.port';
-import { User } from '../../../../domain/entities/user.entity'; // Asume User es @Entity
+import { ProfileRepositoryPort } from '../../../../domain/ports/out/profile-repository.port';
+import { Profile } from '../../../../domain/entities/profile.entity';
 
 @Injectable()
-export class UserRepository implements UserRepositoryPort {
+export class ProfileRepository implements ProfileRepositoryPort {
   constructor(
-    @InjectRepository(User)
-    private readonly repo: Repository<User>,
+    @InjectRepository(Profile)
+    private readonly repo: Repository<Profile>,
   ) {}
 
-  async save(user: User): Promise<User> {
-    return this.repo.save(user);
+  async save(profile: Profile): Promise<Profile> {
+    return this.repo.save(profile);
   }
 
-  async findById(id: string): Promise<User | null> {
-    return this.repo.findOne({ where: { id } });
+  async findById(id: string): Promise<Profile | null> {
+    return this.repo.findOne({ where: { id_profile: id } });
   }
 
-  async findByEmail(email: string): Promise<User | null> {
-    return this.repo.findOne({ where: { email } });
+  async findAll(): Promise<Profile[]> {
+    return this.repo.find({
+      order: {
+        first_name: 'ASC'
+      }
+    });
   }
 
-  // Implementación requerida por el port
-  async create(userData: { name: string; email: string; password: string; role: 'client' | 'admin' }): Promise<User> {
-    // Mapear a la entidad. Aquí se guarda la contraseña tal cual en passwordHash;
-    // idealmente el hashing se hace en la capa de servicio (UserService).
-    const user = this.repo.create({
-      name: userData.name,
-      email: userData.email,
-      passwordHash: userData.password,
-      role: userData.role,
-    } as Partial<User>);
-    return this.repo.save(user);
+  async findByPhone(phone: string): Promise<Profile | null> {
+    return this.repo.findOne({ where: { phone } });
+  }
+
+  async create(profileData: { 
+    id_user: string;
+    id_profile: string;
+    first_name: string; 
+    last_name: string; 
+    document_type: string; 
+    document_number: string; 
+    phone: string; 
+    address: string;  
+  }): Promise<Profile> {
+    const profile = this.repo.create({
+      id_user: profileData.id_user,
+      id_profile: profileData.id_profile,
+      first_name: profileData.first_name,
+      last_name: profileData.last_name,
+      document_type: profileData.document_type,
+      document_number: profileData.document_number,
+      phone: profileData.phone,
+      address: profileData.address
+    });
+    return this.repo.save(profile);
   }
 }
