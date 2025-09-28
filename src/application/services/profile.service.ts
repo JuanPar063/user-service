@@ -1,6 +1,6 @@
 import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
 import { Profile } from '../../domain/entities/profile.entity';
-import { ProfileRepository } from '../../infrastructure/adapters/out/repositories/user.repository';
+import { ProfileRepository } from '../../infrastructure/adapters/out/repositories/profile.repository';
 import { CreateProfilePort } from '../../domain/ports/in/create-profile.port';
 import { GetProfilePort } from '../../domain/ports/in/get-profile.port';
 

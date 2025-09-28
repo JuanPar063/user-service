@@ -1,15 +1,21 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
-import { getConnection } from 'typeorm';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  app.useGlobalPipes(new ValidationPipe());
-  await app.listen(3000);
   
-// ...
-  const connection = getConnection();
-  await connection.runMigrations();  // Corre todas las migrations pendientes
+  // Habilitar CORS para que funcione con frontend
+  app.enableCors();
+  
+  // Validación global de DTOs
+  app.useGlobalPipes(new ValidationPipe({
+    transform: true,
+    whitelist: true,
+    forbidNonWhitelisted: true,
+  }));
+  
+  await app.listen(3000);
+  console.log('🚀 User Service running on http://localhost:3000');
 }
 bootstrap();

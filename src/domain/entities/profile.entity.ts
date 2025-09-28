@@ -5,7 +5,7 @@ export class Profile {
   @PrimaryGeneratedColumn('uuid')
   id_profile: string;
 
-  @PrimaryGeneratedColumn('uuid')
+  @Column('uuid')
   id_user: string;
 
   @Column({ type: 'varchar', length: 100 })
@@ -26,7 +26,9 @@ export class Profile {
   @Column({ type: 'text' })
   address: string;
 
-  constructor(data: Partial<Profile>) {
-    Object.assign(this, data);
+  constructor(data?: Partial<Profile>) {
+    if (data) {
+      Object.assign(this, data);
+    }
   }
 }
