@@ -1,17 +1,30 @@
-import { Controller, Post, Body, Get, Param, HttpStatus, HttpCode } from '@nestjs/common';
+import { 
+  Controller, Post, Body, Get, Param, HttpStatus, HttpCode 
+} from '@nestjs/common';
 import { ProfileService } from '../../../application/services/profile.service';
 import { CreateProfileDto } from '../../dto/create-profile.dto';
 import { ProfileResponseDto } from '../../dto/profile-response.dto';
 import { CreateProfilePort } from '../../../domain/ports/in/create-profile.port';
 import { GetProfilePort } from '../../../domain/ports/in/get-profile.port';
+import { 
+  ApiTags, ApiOperation, ApiResponse, ApiParam, ApiCreatedResponse 
+} from '@nestjs/swagger';
 
+@ApiTags('profiles')
 @Controller('profiles')
 export class ProfileController {
   constructor(private readonly profileService: ProfileService) {}
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  async createProfile(@Body() createProfileDto: CreateProfileDto): Promise<{
+  @ApiOperation({ summary: 'Crear un nuevo perfil de usuario' })
+  @ApiCreatedResponse({
+    description: 'Usuario registrado exitosamente',
+    type: ProfileResponseDto,
+  })
+  async createProfile(
+    @Body() createProfileDto: CreateProfileDto,
+  ): Promise<{
     message: string;
     data: ProfileResponseDto;
   }> {
@@ -24,6 +37,12 @@ export class ProfileController {
   }
 
   @Get()
+  @ApiOperation({ summary: 'Obtener todos los perfiles' })
+  @ApiResponse({
+    status: 200,
+    description: 'Usuarios obtenidos exitosamente',
+    type: [ProfileResponseDto],
+  })
   async getAllProfiles(): Promise<{
     message: string;
     data: ProfileResponseDto[];
@@ -37,7 +56,17 @@ export class ProfileController {
   }
 
   @Get(':id')
-  async getUserById(@Param('id') id: string): Promise<{
+  @ApiOperation({ summary: 'Obtener un perfil por ID' })
+  @ApiParam({ name: 'id', type: String, example: 'a1b2c3' })
+  @ApiResponse({
+    status: 200,
+    description: 'Usuario obtenido exitosamente',
+    type: ProfileResponseDto,
+  })
+  @ApiResponse({ status: 404, description: 'Usuario no encontrado' })
+  async getUserById(
+    @Param('id') id: string,
+  ): Promise<{
     message: string;
     data: ProfileResponseDto;
   }> {
@@ -50,7 +79,17 @@ export class ProfileController {
   }
 
   @Get('phone/:phone')
-  async getUserByPhone(@Param('phone') phone: string): Promise<{
+  @ApiOperation({ summary: 'Obtener un perfil por número de teléfono' })
+  @ApiParam({ name: 'phone', type: String, example: '+573001112233' })
+  @ApiResponse({
+    status: 200,
+    description: 'Usuario obtenido exitosamente',
+    type: ProfileResponseDto,
+  })
+  @ApiResponse({ status: 404, description: 'Usuario no encontrado' })
+  async getUserByPhone(
+    @Param('phone') phone: string,
+  ): Promise<{
     message: string;
     data: ProfileResponseDto;
   }> {
