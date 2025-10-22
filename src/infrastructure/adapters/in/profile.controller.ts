@@ -19,10 +19,51 @@ import {
 } from '@nestjs/swagger';
 
 @ApiTags('profiles')
-@ApiBearerAuth() // mostrará el candado (si luego usas guard, ya está listo)
+@ApiBearerAuth()
 @Controller('profiles')
 export class ProfileController {
   constructor(private readonly profileService: ProfileService) {}
+
+  // ✅ NUEVO: Endpoint para validar teléfono antes de registrar
+  @Get('validate/phone/:phone')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Validar si un teléfono ya está registrado' })
+  @ApiParam({ name: 'phone', type: String, example: '+573001112233' })
+  @ApiOkResponse({
+    description: 'Resultado de validación',
+    schema: {
+      type: 'object',
+      properties: {
+        available: { type: 'boolean', example: true },
+        message: { type: 'string', example: 'El teléfono está disponible' }
+      }
+    }
+  })
+  async validatePhone(
+    @Param('phone') phone: string,
+  ): Promise<{ available: boolean; message: string }> {
+    try {
+      const existingProfile = await this.profileService.getProfileByPhone(phone);
+      
+      if (existingProfile) {
+        return {
+          available: false,
+          message: 'Este número de teléfono ya está registrado'
+        };
+      }
+      
+      return {
+        available: true,
+        message: 'El teléfono está disponible'
+      };
+    } catch (error) {
+      // Si no se encuentra, significa que está disponible
+      return {
+        available: true,
+        message: 'El teléfono está disponible'
+      };
+    }
+  }
 
   // POST /profiles
   @Post()
