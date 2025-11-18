@@ -9,8 +9,9 @@ async function bootstrap() {
   // ✅ CORS para frontend - CRÍTICO para que funcione con React
   app.enableCors({
     origin: [
-      'http://localhost:3002', // Frontend React
-      'http://localhost:3000', // Por si el frontend corre en 3000
+      'http://localhost:3004',
+      'http://localhost:3002',                            
+      'http://localhost:3000',
     ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
