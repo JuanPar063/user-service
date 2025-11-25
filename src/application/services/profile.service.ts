@@ -1,3 +1,5 @@
+// src/application/services/profile.service.ts (user-service)
+
 import {
   Injectable,
   ConflictException,
@@ -17,7 +19,38 @@ export class ProfileService implements CreateProfilePort, GetProfilePort {
   constructor(private readonly profileRepository: ProfileRepository) {}
 
   /**
-   * Crea un nuevo perfil con validaciones básicas y formato colombiano de teléfono (+57).
+   * ✅ NUEVO: Valida si un número de documento ya está registrado
+   */
+  async validateDocumentNumber(documentNumber: string): Promise<{ 
+    available: boolean; 
+    message: string 
+  }> {
+    try {
+      const existingProfile = await this.profileRepository.findByDocumentNumber(documentNumber);
+      
+      if (existingProfile) {
+        this.logger.warn(`Documento duplicado detectado: ${documentNumber}`);
+        return {
+          available: false,
+          message: 'Este número de documento ya está registrado',
+        };
+      }
+
+      return {
+        available: true,
+        message: 'El número de documento está disponible',
+      };
+    } catch (error) {
+      this.logger.debug(`Documento disponible: ${documentNumber}`);
+      return {
+        available: true,
+        message: 'El número de documento está disponible',
+      };
+    }
+  }
+
+  /**
+   * Crea un nuevo perfil con validaciones mejoradas
    */
   async createProfile(profileData: {
     id_user: string;
@@ -41,24 +74,28 @@ export class ProfileService implements CreateProfilePort, GetProfilePort {
       ];
 
       for (const campo of camposObligatorios) {
-        // @ts-ignore
-        const valor = profileData[campo];
+        const valor = profileData[campo as keyof typeof profileData];
         if (!valor || String(valor).trim() === '') {
           this.logger.warn(`Campo obligatorio faltante: ${campo}`);
           throw new BadRequestException(`El campo '${campo}' es obligatorio.`);
         }
       }
 
+      // ✅ VALIDACIÓN: Verificar si el documento ya existe
+      const documentValidation = await this.validateDocumentNumber(profileData.document_number);
+      if (!documentValidation.available) {
+        this.logger.warn(`Intento de crear perfil con documento duplicado: ${profileData.document_number}`);
+        throw new ConflictException(`Ya existe un usuario con el número de documento ${profileData.document_number}`);
+      }
+
       // Normalizar el teléfono
       let phone = String(profileData.phone).trim();
 
-      // Si no incluye el prefijo +57 y tiene 10 dígitos, se lo agrega
       if (/^\d{10}$/.test(phone)) {
         phone = `+57${phone}`;
         this.logger.debug(`Se normalizó el teléfono agregando +57 → ${phone}`);
       }
 
-      // Validar formato colombiano (+57 seguido de 10 dígitos)
       const phoneRegex = /^\+57\d{10}$/;
       if (!phoneRegex.test(phone)) {
         this.logger.warn(`Formato de teléfono inválido: ${profileData.phone}`);
@@ -67,13 +104,12 @@ export class ProfileService implements CreateProfilePort, GetProfilePort {
         );
       }
 
-      // Actualizar el valor normalizado en el DTO
       profileData.phone = phone;
 
-      // Verificar si ya existe un perfil con ese número
+      // ✅ VALIDACIÓN: Verificar si el teléfono ya existe
       const existente = await this.profileRepository.findByPhone(profileData.phone);
       if (existente) {
-        this.logger.warn(`Intento de crear perfil duplicado: ${profileData.phone}`);
+        this.logger.warn(`Intento de crear perfil con teléfono duplicado: ${profileData.phone}`);
         throw new ConflictException('Ya existe un usuario con este número de teléfono.');
       }
 
@@ -130,7 +166,7 @@ export class ProfileService implements CreateProfilePort, GetProfilePort {
   }
 
   /**
-   * Busca un perfil por número de teléfono (soporta formato con o sin +57).
+   * Busca un perfil por número de teléfono
    */
   async getProfileByPhone(phone: string): Promise<Profile | null> {
     if (!phone || phone.trim() === '') {
@@ -138,7 +174,6 @@ export class ProfileService implements CreateProfilePort, GetProfilePort {
     }
 
     let normalized = String(phone).trim();
-    // Normalizar para búsquedas
     if (/^\d{10}$/.test(normalized)) {
       normalized = `+57${normalized}`;
     }
@@ -156,6 +191,30 @@ export class ProfileService implements CreateProfilePort, GetProfilePort {
       this.logger.error('Error al obtener perfil por teléfono', error.stack || error);
       if (error instanceof NotFoundException) throw error;
       throw new BadRequestException('Error al consultar el perfil por teléfono.');
+    }
+  }
+
+  /**
+   * ✅ NUEVO: Busca un perfil por número de documento
+   */
+  async getProfileByDocumentNumber(documentNumber: string): Promise<Profile | null> {
+    if (!documentNumber || documentNumber.trim() === '') {
+      throw new BadRequestException('El número de documento es obligatorio.');
+    }
+
+    try {
+      const perfil = await this.profileRepository.findByDocumentNumber(documentNumber);
+      if (!perfil) {
+        throw new NotFoundException(
+          `Usuario con documento ${documentNumber} no encontrado.`,
+        );
+      }
+      this.logger.log(`Perfil encontrado para documento: ${documentNumber}`);
+      return perfil;
+    } catch (error) {
+      this.logger.error('Error al obtener perfil por documento', error.stack || error);
+      if (error instanceof NotFoundException) throw error;
+      throw new BadRequestException('Error al consultar el perfil por documento.');
     }
   }
 }

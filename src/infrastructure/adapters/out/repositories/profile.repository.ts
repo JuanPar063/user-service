@@ -1,3 +1,5 @@
+// src/infrastructure/adapters/out/repositories/profile.repository.ts
+
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -31,9 +33,15 @@ export class ProfileRepository implements ProfileRepositoryPort {
     return this.repo.findOne({ where: { phone } });
   }
 
+  /**
+   * ✅ NUEVO: Busca un perfil por número de documento
+   */
+  async findByDocumentNumber(documentNumber: string): Promise<Profile | null> {
+    return this.repo.findOne({ where: { document_number: documentNumber } });
+  }
+
   async create(profileData: { 
     id_user: string;
-    // REMOVEMOS id_profile de aquí
     first_name: string; 
     last_name: string; 
     document_type: string; 
@@ -41,10 +49,8 @@ export class ProfileRepository implements ProfileRepositoryPort {
     phone: string; 
     address: string;  
   }): Promise<Profile> {
-    // Creamos una nueva instancia SIN especificar id_profile
     const profile = this.repo.create({
       id_user: profileData.id_user,
-      // NO incluimos id_profile aquí
       first_name: profileData.first_name,
       last_name: profileData.last_name,
       document_type: profileData.document_type,
@@ -53,7 +59,6 @@ export class ProfileRepository implements ProfileRepositoryPort {
       address: profileData.address
     });
     
-    // Guardamos y retornamos el profile con el ID generado automáticamente
     return this.repo.save(profile);
   }
 }

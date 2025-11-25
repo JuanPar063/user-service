@@ -1,3 +1,5 @@
+// src/infrastructure/adapters/in/profile.controller.ts
+
 import {
   Controller,
   Post,
@@ -36,7 +38,42 @@ export class ProfileController {
   constructor(private readonly profileService: ProfileService) {}
 
   /**
-   * Valida si un número de teléfono ya está registrado.
+   * ✅ NUEVO: Valida si un número de documento ya está registrado
+   */
+  @Get('validate/document/:documentNumber')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Validar si un número de documento ya está registrado' })
+  @ApiParam({ name: 'documentNumber', type: String, example: '1234567890' })
+  @ApiOkResponse({
+    description: 'Resultado de validación',
+    schema: {
+      type: 'object',
+      properties: {
+        available: { type: 'boolean', example: true },
+        message: { type: 'string', example: 'El documento está disponible' },
+      },
+    },
+  })
+  async validateDocumentNumber(
+    @Param('documentNumber') documentNumber: string,
+  ): Promise<{ available: boolean; message: string }> {
+    try {
+      if (!documentNumber || documentNumber.trim() === '') {
+        throw new BadRequestException('Debe proporcionar un número de documento.');
+      }
+
+      return await this.profileService.validateDocumentNumber(documentNumber);
+    } catch (error) {
+      this.logger.debug(`Documento disponible: ${documentNumber}`);
+      return {
+        available: true,
+        message: 'El documento está disponible',
+      };
+    }
+  }
+
+  /**
+   * Valida si un número de teléfono ya está registrado
    */
   @Get('validate/phone/:phone')
   @HttpCode(HttpStatus.OK)
@@ -83,7 +120,7 @@ export class ProfileController {
   }
 
   /**
-   * Crea un nuevo perfil de usuario.
+   * Crea un nuevo perfil de usuario
    */
   @Post()
   @HttpCode(HttpStatus.CREATED)
@@ -111,7 +148,7 @@ export class ProfileController {
   }
 
   /**
-   * Obtiene todos los perfiles registrados (paginación opcional).
+   * Obtiene todos los perfiles registrados
    */
   @Get()
   @ApiOperation({ summary: 'Obtener todos los perfiles (con paginación opcional)' })
@@ -134,7 +171,7 @@ export class ProfileController {
   }
 
   /**
-   * Obtiene un perfil por su ID.
+   * Obtiene un perfil por su ID
    */
   @Get(':id')
   @ApiOperation({ summary: 'Obtener un perfil por ID' })
@@ -156,7 +193,7 @@ export class ProfileController {
   }
 
   /**
-   * Obtiene un perfil por número de teléfono.
+   * Obtiene un perfil por número de teléfono
    */
   @Get('phone/:phone')
   @ApiOperation({ summary: 'Obtener un perfil por número de teléfono' })
@@ -171,6 +208,28 @@ export class ProfileController {
   ): Promise<{ message: string; data: ProfileResponseDto }> {
     this.logger.debug(`Buscando perfil por teléfono: ${phone}`);
     const user = await (this.profileService as GetProfilePort).getProfileByPhone(phone);
+    return {
+      message: 'Usuario obtenido exitosamente',
+      data: new ProfileResponseDto(user),
+    };
+  }
+
+  /**
+   * ✅ NUEVO: Obtiene un perfil por número de documento
+   */
+  @Get('document/:documentNumber')
+  @ApiOperation({ summary: 'Obtener un perfil por número de documento' })
+  @ApiParam({ name: 'documentNumber', type: String, example: '1234567890' })
+  @ApiOkResponse({
+    description: 'Usuario obtenido exitosamente',
+    schema: { type: 'object' },
+  })
+  @ApiResponse({ status: 404, description: 'Usuario no encontrado' })
+  async getUserByDocument(
+    @Param('documentNumber') documentNumber: string,
+  ): Promise<{ message: string; data: ProfileResponseDto }> {
+    this.logger.debug(`Buscando perfil por documento: ${documentNumber}`);
+    const user = await this.profileService.getProfileByDocumentNumber(documentNumber);
     return {
       message: 'Usuario obtenido exitosamente',
       data: new ProfileResponseDto(user),
