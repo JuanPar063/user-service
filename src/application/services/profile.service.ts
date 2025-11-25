@@ -217,4 +217,68 @@ export class ProfileService implements CreateProfilePort, GetProfilePort {
       throw new BadRequestException('Error al consultar el perfil por documento.');
     }
   }
+  /**
+   * ✅ NUEVO: Actualiza un perfil existente
+   */
+  async updateProfile(
+    id_user: string,
+    updateData: {
+      first_name?: string;
+      last_name?: string;
+      phone?: string;
+      address?: string;
+    },
+  ): Promise<Profile> {
+    try {
+      // Verificar que el perfil existe
+      const existingProfile = await this.profileRepository.findById(id_user);
+      if (!existingProfile) {
+        throw new NotFoundException(`Perfil con ID ${id_user} no encontrado.`);
+      }
+
+      // Validar y normalizar teléfono si se proporciona
+      if (updateData.phone) {
+        let phone = String(updateData.phone).trim();
+
+        if (/^\d{10}$/.test(phone)) {
+          phone = `+57${phone}`;
+          this.logger.debug(`Se normalizó el teléfono agregando +57 → ${phone}`);
+        }
+
+        const phoneRegex = /^\+57\d{10}$/;
+        if (!phoneRegex.test(phone)) {
+          throw new BadRequestException(
+            'El número de teléfono debe tener el formato +57XXXXXXXXXX o 10 dígitos locales.',
+          );
+        }
+
+        // Verificar que el teléfono no esté en uso por otro usuario
+        if (phone !== existingProfile.phone) {
+          const phoneExists = await this.profileRepository.findByPhone(phone);
+          if (phoneExists && phoneExists.id_user !== id_user) {
+            throw new ConflictException(
+              'Este número de teléfono ya está registrado por otro usuario.',
+            );
+          }
+        }
+
+        updateData.phone = phone;
+      }
+
+      // Actualizar el perfil
+      const updatedProfile = await this.profileRepository.update(id_user, updateData);
+      this.logger.log(`Perfil actualizado correctamente para usuario ${id_user}`);
+      return updatedProfile;
+    } catch (error) {
+      this.logger.error('Error al actualizar el perfil', error.stack || error);
+      if (
+        error instanceof BadRequestException ||
+        error instanceof ConflictException ||
+        error instanceof NotFoundException
+      ) {
+        throw error;
+      }
+      throw new BadRequestException('Ocurrió un error al actualizar el perfil.');
+    }
+  }
 }

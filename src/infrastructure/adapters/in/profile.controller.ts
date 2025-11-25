@@ -5,6 +5,7 @@ import {
   Post,
   Body,
   Get,
+  Put,
   Param,
   HttpStatus,
   HttpCode,
@@ -17,7 +18,7 @@ import { CreateProfileDto } from '../../dto/create-profile.dto';
 import { ProfileResponseDto } from '../../dto/profile-response.dto';
 import { CreateProfilePort } from '../../../domain/ports/in/create-profile.port';
 import { GetProfilePort } from '../../../domain/ports/in/get-profile.port';
-
+import { UpdateProfileDto } from '../../dto/update-profile.dto';
 import {
   ApiTags,
   ApiOperation,
@@ -233,6 +234,30 @@ export class ProfileController {
     return {
       message: 'Usuario obtenido exitosamente',
       data: new ProfileResponseDto(user),
+    };
+  }
+
+   /**
+   * ✅ NUEVO: Actualiza un perfil por ID de usuario
+   */
+  @Put(':id')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Actualizar un perfil de usuario' })
+  @ApiParam({ name: 'id', type: String, description: 'ID del usuario' })
+  @ApiOkResponse({
+    description: 'Perfil actualizado exitosamente',
+    schema: { type: 'object' },
+  })
+  @ApiResponse({ status: 404, description: 'Usuario no encontrado' })
+  async updateProfile(
+    @Param('id') id: string,
+    @Body() updateProfileDto: UpdateProfileDto,
+  ): Promise<{ message: string; data: ProfileResponseDto }> {
+    this.logger.log(`Actualizando perfil para usuario: ${id}`);
+    const updatedProfile = await this.profileService.updateProfile(id, updateProfileDto);
+    return {
+      message: 'Perfil actualizado exitosamente',
+      data: new ProfileResponseDto(updatedProfile),
     };
   }
 }

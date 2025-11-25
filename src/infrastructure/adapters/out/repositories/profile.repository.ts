@@ -18,7 +18,7 @@ export class ProfileRepository implements ProfileRepositoryPort {
   }
 
   async findById(id: string): Promise<Profile | null> {
-    return this.repo.findOne({ where: { id_profile: id } });
+    return this.repo.findOne({ where: { id_user: id } });
   }
 
   async findAll(): Promise<Profile[]> {
@@ -33,9 +33,6 @@ export class ProfileRepository implements ProfileRepositoryPort {
     return this.repo.findOne({ where: { phone } });
   }
 
-  /**
-   * ✅ NUEVO: Busca un perfil por número de documento
-   */
   async findByDocumentNumber(documentNumber: string): Promise<Profile | null> {
     return this.repo.findOne({ where: { document_number: documentNumber } });
   }
@@ -60,5 +57,15 @@ export class ProfileRepository implements ProfileRepositoryPort {
     });
     
     return this.repo.save(profile);
+  }
+
+  // ✅ NUEVO: Método para actualizar perfil
+  async update(id_user: string, profileData: Partial<Profile>): Promise<Profile> {
+    await this.repo.update({ id_user }, profileData);
+    const updated = await this.findById(id_user);
+    if (!updated) {
+      throw new Error('Profile not found after update');
+    }
+    return updated;
   }
 }
