@@ -1,9 +1,9 @@
-import { IsString, IsNotEmpty, Length, IsUUID } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import { IsString, IsNotEmpty, Length, IsUUID, IsNumber, IsOptional, Min } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateProfileDto {
   // REMOVEMOS id_profile del DTO ya que se genera automáticamente
-  
+
   @ApiProperty({
     description: 'Identificador único del usuario (UUID)',
     example: '550e8400-e29b-41d4-a716-446655440000',
@@ -65,4 +65,13 @@ export class CreateProfileDto {
   @IsNotEmpty()
   @Length(1, 100)
   address: string;
+
+  @ApiPropertyOptional({
+    description: 'Ingreso mensual en COP',
+    example: 2500000,
+  })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  monthly_income?: number;
 }

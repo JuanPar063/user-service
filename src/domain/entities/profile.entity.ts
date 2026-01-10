@@ -25,6 +25,16 @@ export class Profile {
 
   @Column({ type: 'text' })
   address: string;
+  
+  @Column({ 
+    type: 'decimal', 
+    precision: 12, 
+    scale: 2, 
+    nullable: true,
+    name: 'monthly_income' 
+  })
+  monthly_income?: number;
+
 
   constructor(data?: Partial<Profile>) {
     if (data) {

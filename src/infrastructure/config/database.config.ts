@@ -1,6 +1,8 @@
-import { Profile } from '../../domain/entities/profile.entity'; // path corregida
+import { Profile } from '../../domain/entities/profile.entity';
 import { TypeOrmModuleOptions } from '@nestjs/typeorm';
+import { DataSource } from 'typeorm';
 import * as dotenv from 'dotenv';
+
 dotenv.config();
 
 export const typeOrmConfig: TypeOrmModuleOptions = {
@@ -11,5 +13,11 @@ export const typeOrmConfig: TypeOrmModuleOptions = {
   password: process.env.DATABASE_PASSWORD || 'password',
   database: process.env.DATABASE_NAME || 'mydb',
   entities: [Profile],
-  synchronize: true,
+  synchronize: false, // 🔴 importante: false en producción y para migraciones
 };
+
+export const AppDataSource = new DataSource({
+  ...typeOrmConfig,
+  type: 'postgres' as const, // ← Especifica el tipo aquí
+  migrations: [__dirname + '/../../migrations/*{.ts,.js}'],
+});

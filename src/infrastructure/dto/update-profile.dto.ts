@@ -1,6 +1,6 @@
 // src/infrastructure/dto/update-profile.dto.ts
 
-import { IsString, IsOptional, MinLength, MaxLength, Matches } from 'class-validator';
+import { IsString, IsOptional, MinLength, MaxLength, Matches, IsNumber, Min } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class UpdateProfileDto {
@@ -32,4 +32,13 @@ export class UpdateProfileDto {
   @MinLength(5)
   @MaxLength(200)
   address?: string;
+
+  @ApiPropertyOptional({
+    description: 'Ingreso mensual en COP',
+    example: 2500000,
+  })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  monthly_income?: number;
 }
