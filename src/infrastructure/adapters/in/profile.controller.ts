@@ -12,6 +12,7 @@ import {
   Query,
   Logger,
   BadRequestException,
+  NotFoundException,
 } from '@nestjs/common';
 import { ProfileService } from '../../../application/services/profile.service';
 import { CreateProfileDto } from '../../dto/create-profile.dto';
@@ -36,117 +37,11 @@ import {
 export class ProfileController {
   private readonly logger = new Logger(ProfileController.name);
 
-  constructor(private readonly profileService: ProfileService) {}
+  constructor(private readonly profileService: ProfileService) { }
 
-  /**
-   * ✅ NUEVO: Valida si un número de documento ya está registrado
-   */
-  @Get('validate/document/:documentNumber')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Validar si un número de documento ya está registrado' })
-  @ApiParam({ name: 'documentNumber', type: String, example: '1234567890' })
-  @ApiOkResponse({
-    description: 'Resultado de validación',
-    schema: {
-      type: 'object',
-      properties: {
-        available: { type: 'boolean', example: true },
-        message: { type: 'string', example: 'El documento está disponible' },
-      },
-    },
-  })
-  async validateDocumentNumber(
-    @Param('documentNumber') documentNumber: string,
-  ): Promise<{ available: boolean; message: string }> {
-    try {
-      if (!documentNumber || documentNumber.trim() === '') {
-        throw new BadRequestException('Debe proporcionar un número de documento.');
-      }
-
-      return await this.profileService.validateDocumentNumber(documentNumber);
-    } catch (error) {
-      this.logger.debug(`Documento disponible: ${documentNumber}`);
-      return {
-        available: true,
-        message: 'El documento está disponible',
-      };
-    }
-  }
-
-  /**
-   * Valida si un número de teléfono ya está registrado
-   */
-  @Get('validate/phone/:phone')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Validar si un teléfono ya está registrado' })
-  @ApiParam({ name: 'phone', type: String, example: '+573001112233' })
-  @ApiOkResponse({
-    description: 'Resultado de validación',
-    schema: {
-      type: 'object',
-      properties: {
-        available: { type: 'boolean', example: true },
-        message: { type: 'string', example: 'El teléfono está disponible' },
-      },
-    },
-  })
-  async validatePhone(
-    @Param('phone') phone: string,
-  ): Promise<{ available: boolean; message: string }> {
-    try {
-      if (!phone || phone.trim() === '') {
-        throw new BadRequestException('Debe proporcionar un número de teléfono.');
-      }
-
-      const existingProfile = await this.profileService.getProfileByPhone(phone);
-      if (existingProfile) {
-        this.logger.warn(`Teléfono duplicado detectado: ${phone}`);
-        return {
-          available: false,
-          message: 'Este número de teléfono ya está registrado',
-        };
-      }
-
-      return {
-        available: true,
-        message: 'El teléfono está disponible',
-      };
-    } catch (error) {
-      this.logger.debug(`Teléfono disponible: ${phone}`);
-      return {
-        available: true,
-        message: 'El teléfono está disponible',
-      };
-    }
-  }
-
-  /**
-   * Crea un nuevo perfil de usuario
-   */
-  @Post()
-  @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: 'Crear un nuevo perfil de usuario' })
-  @ApiCreatedResponse({
-    description: 'Usuario registrado exitosamente',
-    schema: {
-      type: 'object',
-      properties: {
-        message: { type: 'string', example: 'Usuario registrado exitosamente' },
-        data: { type: 'object' },
-      },
-    },
-  })
-  async createProfile(
-    @Body() createProfileDto: CreateProfileDto,
-  ): Promise<{ message: string; data: ProfileResponseDto }> {
-    this.logger.log(`Solicitud de creación de perfil: ${createProfileDto.phone}`);
-    const profile = await (this.profileService as CreateProfilePort).createProfile(createProfileDto);
-    this.logger.log(`Perfil creado para usuario ${profile.id_user}`);
-    return {
-      message: 'Usuario registrado exitosamente',
-      data: new ProfileResponseDto(profile),
-    };
-  }
+  // ═══════════════════════════════════════════════════════════════
+  // 1) RUTAS SIN PARÁMETROS (más específicas primero)
+  // ═══════════════════════════════════════════════════════════════
 
   /**
    * Obtiene todos los perfiles registrados
@@ -155,10 +50,7 @@ export class ProfileController {
   @ApiOperation({ summary: 'Obtener todos los perfiles (con paginación opcional)' })
   @ApiQuery({ name: 'page', required: false, example: 1 })
   @ApiQuery({ name: 'limit', required: false, example: 10 })
-  @ApiOkResponse({
-    description: 'Usuarios obtenidos exitosamente',
-    schema: { type: 'object' },
-  })
+  @ApiOkResponse({ description: 'Usuarios obtenidos exitosamente' })
   async getAllProfiles(
     @Query('page') _page?: string,
     @Query('limit') _limit?: string,
@@ -172,82 +64,137 @@ export class ProfileController {
   }
 
   /**
-   * Obtiene un perfil por su ID
+   * Crea un nuevo perfil de usuario
    */
-  @Get(':id')
-  @ApiOperation({ summary: 'Obtener un perfil por ID' })
-  @ApiParam({ name: 'id', type: String, example: 'a1b2c3' })
-  @ApiOkResponse({
-    description: 'Usuario obtenido exitosamente',
-    schema: { type: 'object' },
-  })
-  @ApiResponse({ status: 404, description: 'Usuario no encontrado' })
-  async getUserById(
-    @Param('id') id: string,
+  @Post()
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Crear un nuevo perfil de usuario' })
+  @ApiCreatedResponse({ description: 'Usuario registrado exitosamente' })
+  async createProfile(
+    @Body() createProfileDto: CreateProfileDto,
   ): Promise<{ message: string; data: ProfileResponseDto }> {
-    this.logger.debug(`Buscando perfil con ID: ${id}`);
-    const profile = await (this.profileService as GetProfilePort).getProfile(id);
+    this.logger.log(`Solicitud de creación de perfil: ${createProfileDto.phone}`);
+    const profile = await (this.profileService as CreateProfilePort).createProfile(createProfileDto);
+    this.logger.log(`Perfil creado para usuario ${profile.id_user}`);
     return {
-      message: 'Usuario obtenido exitosamente',
+      message: 'Usuario registrado exitosamente',
       data: new ProfileResponseDto(profile),
     };
   }
 
-  /**
-   * Obtiene un perfil por número de teléfono
-   */
-  @Get('phone/:phone')
-  @ApiOperation({ summary: 'Obtener un perfil por número de teléfono' })
-  @ApiParam({ name: 'phone', type: String, example: '+573001112233' })
-  @ApiOkResponse({
-    description: 'Usuario obtenido exitosamente',
-    schema: { type: 'object' },
-  })
-  @ApiResponse({ status: 404, description: 'Usuario no encontrado' })
-  async getUserByPhone(
-    @Param('phone') phone: string,
-  ): Promise<{ message: string; data: ProfileResponseDto }> {
-    this.logger.debug(`Buscando perfil por teléfono: ${phone}`);
-    const user = await (this.profileService as GetProfilePort).getProfileByPhone(phone);
-    return {
-      message: 'Usuario obtenido exitosamente',
-      data: new ProfileResponseDto(user),
-    };
+  // ═══════════════════════════════════════════════════════════════
+  // 2) RUTAS CON PREFIJO FIJO (validate/, document/, phone/)
+  // ═══════════════════════════════════════════════════════════════
+
+  @Get('validate/document/:documentNumber')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Validar si un número de documento ya está registrado' })
+  @ApiParam({ name: 'documentNumber', type: String, example: '1234567890' })
+  async validateDocumentNumber(
+    @Param('documentNumber') documentNumber: string,
+  ): Promise<{ available: boolean; message: string }> {
+    try {
+      if (!documentNumber || documentNumber.trim() === '') {
+        throw new BadRequestException('Debe proporcionar un número de documento.');
+      }
+      return await this.profileService.validateDocumentNumber(documentNumber);
+    } catch (error) {
+      this.logger.debug(`Documento disponible: ${documentNumber}`);
+      return { available: true, message: 'El documento está disponible' };
+    }
   }
 
-  /**
-   * ✅ NUEVO: Obtiene un perfil por número de documento
-   */
+  @Get('validate/phone/:phone')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Validar si un teléfono ya está registrado' })
+  @ApiParam({ name: 'phone', type: String, example: '+573001112233' })
+  async validatePhone(
+    @Param('phone') phone: string,
+  ): Promise<{ available: boolean; message: string }> {
+    try {
+      if (!phone || phone.trim() === '') {
+        throw new BadRequestException('Debe proporcionar un número de teléfono.');
+      }
+      const existingProfile = await this.profileService.getProfileByPhone(phone);
+      if (existingProfile) {
+        this.logger.warn(`Teléfono duplicado detectado: ${phone}`);
+        return { available: false, message: 'Este número de teléfono ya está registrado' };
+      }
+      return { available: true, message: 'El teléfono está disponible' };
+    } catch (error) {
+      this.logger.debug(`Teléfono disponible: ${phone}`);
+      return { available: true, message: 'El teléfono está disponible' };
+    }
+  }
+
   @Get('document/:documentNumber')
   @ApiOperation({ summary: 'Obtener un perfil por número de documento' })
   @ApiParam({ name: 'documentNumber', type: String, example: '1234567890' })
-  @ApiOkResponse({
-    description: 'Usuario obtenido exitosamente',
-    schema: { type: 'object' },
-  })
   @ApiResponse({ status: 404, description: 'Usuario no encontrado' })
   async getUserByDocument(
     @Param('documentNumber') documentNumber: string,
   ): Promise<{ message: string; data: ProfileResponseDto }> {
     this.logger.debug(`Buscando perfil por documento: ${documentNumber}`);
     const user = await this.profileService.getProfileByDocumentNumber(documentNumber);
+
+    if (!user) {
+      throw new NotFoundException(`Usuario con documento ${documentNumber} no encontrado`);
+    }
+
     return {
       message: 'Usuario obtenido exitosamente',
       data: new ProfileResponseDto(user),
     };
   }
 
-   /**
-   * ✅ NUEVO: Actualiza un perfil por ID de usuario
-   */
+
+  @Get('phone/:phone')
+  @ApiOperation({ summary: 'Obtener un perfil por número de teléfono' })
+  @ApiParam({ name: 'phone', type: String, example: '+573001112233' })
+  @ApiResponse({ status: 404, description: 'Usuario no encontrado' })
+  async getUserByPhone(
+    @Param('phone') phone: string,
+  ): Promise<{ message: string; data: ProfileResponseDto }> {
+    this.logger.debug(`Buscando perfil por teléfono: ${phone}`);
+    const user = await this.profileService.getProfileByPhone(phone);
+
+    if (!user) {
+      throw new NotFoundException(`Usuario con teléfono ${phone} no encontrado`);
+    }
+
+    return {
+      message: 'Usuario obtenido exitosamente',
+      data: new ProfileResponseDto(user),
+    };
+  }
+  // ═══════════════════════════════════════════════════════════════
+  // 3) RUTAS DINÁMICAS (:id) — SIEMPRE AL FINAL
+  // ═══════════════════════════════════════════════════════════════
+
+  @Get(':id')
+  @ApiOperation({ summary: 'Obtener un perfil por ID' })
+  @ApiParam({ name: 'id', type: String, example: 'a1b2c3' })
+  @ApiResponse({ status: 404, description: 'Usuario no encontrado' })
+  async getUserById(
+    @Param('id') id: string,
+  ): Promise<{ message: string; data: ProfileResponseDto }> {
+    this.logger.debug(`Buscando perfil con ID: ${id}`);
+    const profile = await this.profileService.getProfile(id);
+
+    if (!profile) {
+      throw new NotFoundException(`Usuario con ID ${id} no encontrado`);
+    }
+
+    return {
+      message: 'Usuario obtenido exitosamente',
+      data: new ProfileResponseDto(profile),
+    };
+  }
+
   @Put(':id')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Actualizar un perfil de usuario' })
   @ApiParam({ name: 'id', type: String, description: 'ID del usuario' })
-  @ApiOkResponse({
-    description: 'Perfil actualizado exitosamente',
-    schema: { type: 'object' },
-  })
   @ApiResponse({ status: 404, description: 'Usuario no encontrado' })
   async updateProfile(
     @Param('id') id: string,

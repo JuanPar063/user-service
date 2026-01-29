@@ -25,6 +25,7 @@ export class Profile {
 
   @Column({ type: 'text' })
   address: string;
+
   
   @Column({ 
     type: 'decimal', 

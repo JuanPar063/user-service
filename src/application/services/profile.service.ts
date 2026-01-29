@@ -16,18 +16,18 @@ import { GetProfilePort } from '../../domain/ports/in/get-profile.port';
 export class ProfileService implements CreateProfilePort, GetProfilePort {
   private readonly logger = new Logger(ProfileService.name);
 
-  constructor(private readonly profileRepository: ProfileRepository) {}
+  constructor(private readonly profileRepository: ProfileRepository) { }
 
   /**
    * ✅ NUEVO: Valida si un número de documento ya está registrado
    */
-  async validateDocumentNumber(documentNumber: string): Promise<{ 
-    available: boolean; 
-    message: string 
+  async validateDocumentNumber(documentNumber: string): Promise<{
+    available: boolean;
+    message: string
   }> {
     try {
       const existingProfile = await this.profileRepository.findByDocumentNumber(documentNumber);
-      
+
       if (existingProfile) {
         this.logger.warn(`Documento duplicado detectado: ${documentNumber}`);
         return {
@@ -216,6 +216,9 @@ export class ProfileService implements CreateProfilePort, GetProfilePort {
       if (error instanceof NotFoundException) throw error;
       throw new BadRequestException('Error al consultar el perfil por documento.');
     }
+  }
+  async findAll(): Promise<Profile[]> {
+    return this.profileRepository.findAll();
   }
   /**
    * ✅ NUEVO: Actualiza un perfil existente
