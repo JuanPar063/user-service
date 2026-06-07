@@ -93,15 +93,12 @@ export class ProfileController {
   async validateDocumentNumber(
     @Param('documentNumber') documentNumber: string,
   ): Promise<{ available: boolean; message: string }> {
-    try {
-      if (!documentNumber || documentNumber.trim() === '') {
-        throw new BadRequestException('Debe proporcionar un número de documento.');
-      }
-      return await this.profileService.validateDocumentNumber(documentNumber);
-    } catch (error) {
-      this.logger.debug(`Documento disponible: ${documentNumber}`);
-      return { available: true, message: 'El documento está disponible' };
+    if (!documentNumber || documentNumber.trim() === '') {
+      throw new BadRequestException('Debe proporcionar un número de documento.');
     }
+    // No se atrapan errores: un fallo real (BD caída) debe devolver 500, no un
+    // falso `available: true` que permitiría duplicar documentos.
+    return this.profileService.validateDocumentNumber(documentNumber);
   }
 
   @Get('validate/phone/:phone')
@@ -111,10 +108,12 @@ export class ProfileController {
   async validatePhone(
     @Param('phone') phone: string,
   ): Promise<{ available: boolean; message: string }> {
+    if (!phone || phone.trim() === '') {
+      throw new BadRequestException('Debe proporcionar un número de teléfono.');
+    }
+    // getProfileByPhone lanza NotFoundException cuando no existe (= disponible);
+    // cualquier otro error (BD caída) se propaga en vez de enmascararse como disponible.
     try {
-      if (!phone || phone.trim() === '') {
-        throw new BadRequestException('Debe proporcionar un número de teléfono.');
-      }
       const existingProfile = await this.profileService.getProfileByPhone(phone);
       if (existingProfile) {
         this.logger.warn(`Teléfono duplicado detectado: ${phone}`);
@@ -122,8 +121,10 @@ export class ProfileController {
       }
       return { available: true, message: 'El teléfono está disponible' };
     } catch (error) {
-      this.logger.debug(`Teléfono disponible: ${phone}`);
-      return { available: true, message: 'El teléfono está disponible' };
+      if (error instanceof NotFoundException) {
+        return { available: true, message: 'El teléfono está disponible' };
+      }
+      throw error;
     }
   }
 
