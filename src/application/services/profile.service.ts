@@ -25,28 +25,24 @@ export class ProfileService implements CreateProfilePort, GetProfilePort {
     available: boolean;
     message: string
   }> {
-    try {
-      const existingProfile = await this.profileRepository.findByDocumentNumber(documentNumber);
+    // El repositorio devuelve null cuando NO existe (no lanza excepción), así que
+    // "disponible" es el camino normal. NO atrapamos errores reales (p.ej. BD caída)
+    // para no devolver `available: true` ocultando un fallo (falso positivo crítico
+    // en una validación de unicidad). Si findByDocumentNumber lanza, se propaga (500).
+    const existingProfile = await this.profileRepository.findByDocumentNumber(documentNumber);
 
-      if (existingProfile) {
-        this.logger.warn(`Documento duplicado detectado: ${documentNumber}`);
-        return {
-          available: false,
-          message: 'Este número de documento ya está registrado',
-        };
-      }
-
+    if (existingProfile) {
+      this.logger.warn(`Documento duplicado detectado: ${documentNumber}`);
       return {
-        available: true,
-        message: 'El número de documento está disponible',
-      };
-    } catch (error) {
-      this.logger.debug(`Documento disponible: ${documentNumber}`);
-      return {
-        available: true,
-        message: 'El número de documento está disponible',
+        available: false,
+        message: 'Este número de documento ya está registrado',
       };
     }
+
+    return {
+      available: true,
+      message: 'El número de documento está disponible',
+    };
   }
 
   /**
