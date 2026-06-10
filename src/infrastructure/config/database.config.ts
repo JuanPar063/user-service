@@ -13,7 +13,9 @@ export const typeOrmConfig: TypeOrmModuleOptions = {
   password: process.env.DATABASE_PASSWORD || 'password',
   database: process.env.DATABASE_NAME || 'mydb',
   entities: [Profile],
-  synchronize: false, // 🔴 importante: false en producción y para migraciones
+  // En dev se sincroniza el esquema (crea la tabla profiles automáticamente);
+  // en producción NO (usar migraciones).
+  synchronize: process.env.NODE_ENV !== 'production',
 };
 
 export const AppDataSource = new DataSource({
