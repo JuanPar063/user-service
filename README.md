@@ -1,98 +1,65 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# user-service — Servicio de Perfiles
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+Microservicio NestJS que gestiona los **perfiles de usuario** (datos personales + `monthly_income`).
+Complementa a `user-login`: este último crea la cuenta/identidad; aquí se guardan los datos del cliente.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+- **Puerto:** 3000 · **Prefijo:** `/api/v1` · **Swagger:** http://localhost:3000/api/docs
+- **BD:** PostgreSQL `user-service-db` (puerto host 5432)
+- **Auth:** actualmente **no valida JWT** (se confía en la red interna / gateway). Si se añade,
+  `JWT_SECRET` debe coincidir con el resto.
 
-## Description
+## Rol dentro del sistema
+```
+frontend ─► POST /profiles (tras registrarse en user-login)
+loan-service ─► GET /profiles/:id            (capacidad de endeudamiento)
+admin-service ─► GET /profiles, /profiles/document/:doc  (métricas / análisis)
+```
+Es **consumido** por loan-service y admin-service vía HTTP. No llama a otros servicios.
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## Entidad `Profile`
+`id_profile` (UUID), `id_user` (UUID → user-login), `first_name`, `last_name`, `document_type`,
+`document_number`, `phone` (único, normalizado a `+57XXXXXXXXXX`), `address`,
+`monthly_income` (decimal, usado por el análisis crediticio).
 
-## Project setup
+## Endpoints (`/api/v1/profiles`)
+| Método | Ruta | Descripción |
+|---|---|---|
+| GET | `/profiles` | Lista (paginación `page`/`limit`) |
+| POST | `/profiles` | Crea perfil (valida documento/teléfono únicos, normaliza teléfono) |
+| GET | `/profiles/validate/document/:documentNumber` | ¿Documento disponible? |
+| GET | `/profiles/validate/phone/:phone` | ¿Teléfono disponible? |
+| GET | `/profiles/document/:documentNumber` | Buscar por documento |
+| GET | `/profiles/phone/:phone` | Buscar por teléfono |
+| GET | `/profiles/:id` | Obtener por `id_user` |
+| PUT | `/profiles/:id` | Actualizar datos editables |
+| GET | `/health/liveness` · `/health/readiness` | Healthchecks (readiness verifica BD) |
 
+Respuestas con forma `{ message, data }`.
+
+## Funciones básicas / reglas
+- Normalización colombiana de teléfono: 10 dígitos → `+57XXXXXXXXXX` (regex `^\+57\d{10}$`).
+- Unicidad de documento y teléfono al crear y actualizar.
+- **Validación de disponibilidad fiable:** `validate/document` y `validate/phone` ya **no** devuelven
+  `available:true` ante errores de BD (antes ocultaban fallos); un error real propaga 500.
+
+## Variables de entorno (ver `.env.example`)
+`NODE_ENV`, `PORT=3000`, `DATABASE_*`, `CORS_ORIGINS`, `THROTTLE_TTL`, `THROTTLE_LIMIT`.
+
+## Cómo testear
+Vía `../loans-software` (`docker compose up`) o standalone:
 ```bash
-$ npm install
+npm install && cp .env.example .env && npm run start:dev
+npm run build
+```
+```bash
+# Crear perfil (id_user = el devuelto por user-login al registrar)
+curl -X POST http://localhost:3000/api/v1/profiles -H "Content-Type: application/json" \
+  -d '{"id_user":"<UUID>","first_name":"Juan","last_name":"Perez","document_type":"CC","document_number":"1020304050","phone":"3001234567","address":"Calle 1"}'
+curl http://localhost:3000/api/v1/profiles/validate/document/1020304050
 ```
 
-## Compile and run the project
-
-```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
-```
-
-## Run tests
-
-```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
-```
-
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
-```
-
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
-
-## Resources
-
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+## Notas para nuevos administradores del código
+- Estructura hexagonal: `domain/` (entidad + ports), `application/services/profile.service.ts`
+  (lógica + normalización), `infrastructure/adapters/in` (controller) / `out` (repositorio TypeORM).
+- `synchronize` ya viene en `false`; en dev las tablas se crean por el ciclo de TypeORM/migraciones.
+- Cross-cutting activo: throttler, helmet, logs pino, healthchecks terminus, versionado `/api/v1`.
